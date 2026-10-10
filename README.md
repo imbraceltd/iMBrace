@@ -105,9 +105,13 @@ docker compose pull
 docker compose up -d            # first start takes ~5 min
 ```
 
-`PUBLIC_HOST` defaults to `localhost`, which is enough when the browser runs on the same
-machine. To reach the stack from other machines, add the IP or domain browsers use (no
-scheme, no port) to `.env` before `up`, e.g. `echo PUBLIC_HOST=10.0.0.5 >> .env`.
+`PUBLIC_HOST` defaults to `localhost`: on the machine running the stack, open the dashboard
+at `http://localhost:6868` or `http://127.0.0.1:6868`. The chat widget's full page
+(`:30050/full_page.html`) has to be opened with the `PUBLIC_HOST` name itself, because its
+iframe points there — to use `127.0.0.1` for it (or where `localhost` resolves to IPv6
+first), set `PUBLIC_HOST=127.0.0.1`. To reach the stack from other machines, add the IP or
+domain browsers use (no scheme, no port) to `.env` before `up`, e.g.
+`echo PUBLIC_HOST=10.0.0.5 >> .env`.
 
 Startup order is encoded in the file, so one `up -d` is enough. Back up `.env`: losing
 `AP_ENCRYPTION_KEY` makes stored Workflow connections unrecoverable.
@@ -189,7 +193,7 @@ acceptance test, editing the flows): [`examples/customer-request/README.md`](exa
 
 | Variable | Default | Purpose |
 |---|---|---|
-| `PUBLIC_HOST` | `localhost` | Browser-facing IP/domain — **required** for anything but localhost |
+| `PUBLIC_HOST` | `localhost` | Browser-facing IP/domain. Unset: use `localhost` or `127.0.0.1` on the same machine (`127.0.0.1` for the widget full page needs `PUBLIC_HOST=127.0.0.1`) — **required** for any other machine |
 | `PUBLIC_SCHEME` / `WS_SCHEME` | `http` / `ws` | Set `https` / `wss` behind a TLS proxy |
 | `AP_ENCRYPTION_KEY` / `AP_JWT_SECRET` | none — **required** | Workflow keys, written by `sh generate-env.sh` |
 | `POSTGRES_PASSWORD` | `changeme-postgres-pass` | Postgres superuser and app role |
