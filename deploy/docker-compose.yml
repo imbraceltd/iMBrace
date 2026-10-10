@@ -1374,9 +1374,9 @@ services:
           - imbrace-svc-insightiq
           - imbrace-svc-insightiq.imbrace-services
 
-  # Embeddable chat widget. Entrypoint writes $$WIDGET_ENV to
-  # /usr/share/nginx/html/env, then runs /generate-env-json.sh (ECS task-def
-  # parity). Published on host :30050 (chart NodePort).
+  # Embeddable chat widget. The image entrypoint /generate-env-json.sh writes
+  # the VITE_APP_* variables to /config for the browser, then starts nginx.
+  # Published on host :30050 (chart NodePort).
   chat-widget:
     image: docker.io/imbraceco/imbrace-chat-widget:v0.0.1-31062aa
     container_name: imbrace-svc-chat-widget
@@ -1386,23 +1386,20 @@ services:
         condition: service_started
     ports:
       - "30050:3000"
-    # The image entrypoint is /generate-env-json.sh: as `command` this line would only
-    # be its arguments and WIDGET_ENV would never be written.
-    entrypoint: ["/bin/sh", "-c", "printf '%s' \"$$WIDGET_ENV\" > /usr/share/nginx/html/env && exec /generate-env-json.sh"]
+    # The image's entrypoint (/generate-env-json.sh) turns the VITE_APP_* variables
+    # into /config, which the BROWSER reads: both hosts must be public URLs. With the
+    # in-network names here, full_page.html put http://imbrace-svc-chat-widget:3000
+    # in its iframe, which its CSP (default-src 'self') blocks ("content blocked").
     environment:
       APP_GATEWAY_URL: "http://imbrace-svc-app-gateway:9001"
-      VITE_APP_API_HOST: "http://imbrace-svc-app-gateway:9001"
+      # app-gateway through the edge proxy (it strips /api)
+      VITE_APP_API_HOST: "${PUBLIC_SCHEME:-http}://${PUBLIC_HOST:-localhost}:6868/api"
+      # this container's own public origin (iframe src of full_page.html / chat.js)
+      VITE_APP_CHAT_WIDGET_HOST: "${PUBLIC_SCHEME:-http}://${PUBLIC_HOST:-localhost}:30050"
       PORT: "3000"
-      VITE_APP_CHAT_WIDGET_HOST: "http://imbrace-svc-chat-widget:3000"
       NODE_ENV: "production"
       SKIP_PREFLIGHT_CHECK: "true"
       VITE_APP_ENV: "oss"
-      WIDGET_ENV: |-
-        SKIP_PREFLIGHT_CHECK=true
-        GENERATE_SOURCEMAP=false
-        VITE_APP_ENV=oss
-        VITE_APP_API_HOST=${PUBLIC_SCHEME:-http}://${PUBLIC_HOST:-localhost}:6868/api
-        VITE_APP_CHAT_WIDGET_HOST=${PUBLIC_SCHEME:-http}://${PUBLIC_HOST:-localhost}:30050
     networks:
       imbrace-net:
         aliases:
